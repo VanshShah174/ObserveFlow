@@ -1,0 +1,59 @@
+services:
+  frontend-service:
+    build: ./src/frontend-service
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_PRODUCT_SERVICE_URL=http://localhost:4000
+      - VITE_CART_SERVICE_URL=http://localhost:4001
+      - VITE_ORDER_SERVICE_URL=http://localhost:4002
+      - VITE_USER_SERVICE_URL=http://localhost:4003
+      - VITE_NOTIFICATION_SERVICE_URL=http://localhost:4004
+      - VITE_INVENTORY_SERVICE_URL=http://localhost:4005
+    depends_on:
+      - product-service
+      - cart-service
+      - order-service
+      - user-service
+      - notification-service
+      - inventory-service
+
+  product-service:
+    build: ./src/product-service
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+
+  cart-service:
+    build: ./src/cart-service
+    ports:
+      - "4001:4001"
+    environment:
+      - PORT=4001
+
+  order-service:
+    build: ./src/order-service
+    ports:
+      - "4002:4002"
+    environment:
+      - PORT=4002
+      - CART_SERVICE_URL=http://cart-service:4001
+      - NOTIFICATION_SERVICE_URL=http://notification-service:4004
+
+  user-service:
+    build: ./src/user-service
+    ports:
+      - "4003:4003"
+
+  notification-service:
+    build: ./src/notification-service
+    ports:
+      - "4004:4004"
+    environment:
+      - PORT=4004
+
+  inventory-service:
+    build: ./src/inventory-service
+    ports:
+      - "4005:4005"
