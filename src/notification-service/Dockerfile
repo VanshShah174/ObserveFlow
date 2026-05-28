@@ -10,6 +10,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o notification-service .
 
 FROM alpine:3.19
 
+RUN apk add --no-cache wget
+
 WORKDIR /app
 COPY --from=build /app/notification-service .
 

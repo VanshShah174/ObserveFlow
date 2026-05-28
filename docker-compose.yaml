@@ -1,9 +1,11 @@
 services:
   frontend-service:
     build: ./src/frontend-service
+    container_name: observeflow-frontend
     ports:
       - "3000:3000"
     environment:
+      # Browser-side calls — must use localhost (browser can't resolve Docker service names)
       - VITE_PRODUCT_SERVICE_URL=http://localhost:4000
       - VITE_CART_SERVICE_URL=http://localhost:4001
       - VITE_ORDER_SERVICE_URL=http://localhost:4002
@@ -11,49 +13,145 @@ services:
       - VITE_NOTIFICATION_SERVICE_URL=http://localhost:4004
       - VITE_INVENTORY_SERVICE_URL=http://localhost:4005
     depends_on:
-      - product-service
-      - cart-service
-      - order-service
-      - user-service
-      - notification-service
-      - inventory-service
+      product-service:
+        condition: service_healthy
+      cart-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+    networks:
+      - observeflow-net
+    restart: unless-stopped
 
   product-service:
     build: ./src/product-service
+    container_name: observeflow-product
     ports:
       - "4000:4000"
     environment:
       - PORT=4000
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r=>{process.exit(r.ok?0:1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - product-logs:/app/logs
+    networks:
+      - observeflow-net
+    restart: unless-stopped
 
   cart-service:
     build: ./src/cart-service
+    container_name: observeflow-cart
     ports:
       - "4001:4001"
     environment:
       - PORT=4001
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4001/health').then(r=>{process.exit(r.ok?0:1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - cart-logs:/app/logs
+    networks:
+      - observeflow-net
+    restart: unless-stopped
 
   order-service:
     build: ./src/order-service
+    container_name: observeflow-order
     ports:
       - "4002:4002"
     environment:
       - PORT=4002
+      # Server-to-server calls — use Docker service names
       - CART_SERVICE_URL=http://cart-service:4001
       - NOTIFICATION_SERVICE_URL=http://notification-service:4004
+      - INVENTORY_SERVICE_URL=http://inventory-service:4005
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4002/health').then(r=>{process.exit(r.ok?0:1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - order-logs:/app/logs
+    networks:
+      - observeflow-net
+    restart: unless-stopped
 
   user-service:
     build: ./src/user-service
+    container_name: observeflow-user
     ports:
       - "4003:4003"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4003/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - user-logs:/app/logs
+    networks:
+      - observeflow-net
+    restart: unless-stopped
 
   notification-service:
     build: ./src/notification-service
+    container_name: observeflow-notification
     ports:
       - "4004:4004"
     environment:
       - PORT=4004
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4004/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - notification-logs:/app/logs
+    networks:
+      - observeflow-net
+    restart: unless-stopped
 
   inventory-service:
     build: ./src/inventory-service
+    container_name: observeflow-inventory
     ports:
       - "4005:4005"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4005/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    volumes:
+      - inventory-logs:/app/logs
+    networks:
+      - observeflow-net
+    restart: unless-stopped
+
+volumes:
+  product-logs:
+  cart-logs:
+  order-logs:
+  user-logs:
+  notification-logs:
+  inventory-logs:
+
+networks:
+  observeflow-net:
+    driver: bridge
+    name: observeflow-network
