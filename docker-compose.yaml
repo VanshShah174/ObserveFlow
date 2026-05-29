@@ -4,14 +4,6 @@ services:
     container_name: observeflow-frontend
     ports:
       - "3000:3000"
-    environment:
-      # Browser-side calls — must use localhost (browser can't resolve Docker service names)
-      - VITE_PRODUCT_SERVICE_URL=http://localhost:4000
-      - VITE_CART_SERVICE_URL=http://localhost:4001
-      - VITE_ORDER_SERVICE_URL=http://localhost:4002
-      - VITE_USER_SERVICE_URL=http://localhost:4003
-      - VITE_NOTIFICATION_SERVICE_URL=http://localhost:4004
-      - VITE_INVENTORY_SERVICE_URL=http://localhost:4005
     depends_on:
       product-service:
         condition: service_healthy
