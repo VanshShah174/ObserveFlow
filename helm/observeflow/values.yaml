@@ -1,0 +1,143 @@
+# ============================================================================
+# DEFAULT VALUES
+# Base configuration — override with values-local.yaml or values-dev.yaml
+# ============================================================================
+
+global:
+  namespace: observeflow
+  imageTag: "latest"
+
+# ---- FRONTEND ----
+frontend:
+  name: frontend-service
+  replicas: 1
+  image:
+    repository: observeflow/frontend-service
+    tag: ""  # Falls back to global.imageTag
+  port: 3000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+# ---- PRODUCT SERVICE ----
+productService:
+  name: product-service
+  replicas: 1
+  image:
+    repository: observeflow/product-service
+    tag: ""
+  port: 4000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+# ---- CART SERVICE ----
+cartService:
+  name: cart-service
+  replicas: 1
+  image:
+    repository: observeflow/cart-service
+    tag: ""
+  port: 4001
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+# ---- ORDER SERVICE ----
+orderService:
+  name: order-service
+  replicas: 1
+  image:
+    repository: observeflow/order-service
+    tag: ""
+  port: 4002
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  env:
+    CART_SERVICE_URL: "http://cart-service:4001"
+    NOTIFICATION_SERVICE_URL: "http://notification-service:4004"
+    INVENTORY_SERVICE_URL: "http://inventory-service:4005"
+
+# ---- USER SERVICE ----
+userService:
+  name: user-service
+  replicas: 1
+  image:
+    repository: observeflow/user-service
+    tag: ""
+  port: 4003
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+# ---- NOTIFICATION SERVICE ----
+notificationService:
+  name: notification-service
+  replicas: 1
+  image:
+    repository: observeflow/notification-service
+    tag: ""
+  port: 4004
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# ---- INVENTORY SERVICE ----
+inventoryService:
+  name: inventory-service
+  replicas: 1
+  image:
+    repository: observeflow/inventory-service
+    tag: ""
+  port: 4005
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# ---- GATEWAY API ----
+gateway:
+  enabled: false
+  className: amazon-vpc-lattice
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+
+# ---- OBSERVABILITY ----
+observability:
+  enabled: false
+
+# ---- KARPENTER ----
+karpenter:
+  enabled: false
+  clusterName: ""
+  instanceProfile: ""

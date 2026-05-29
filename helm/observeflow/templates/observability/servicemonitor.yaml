@@ -1,0 +1,4 @@
+{{- if .Values.observability.enabled }}
+# ServiceMonitor for Prometheus scraping
+# Targets all services with /health or /metrics endpoints
+{{- end }}

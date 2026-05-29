@@ -1,0 +1,58 @@
+# ============================================================================
+# LOCAL VALUES — For demo without AWS (Docker Desktop / Minikube / Recruiters)
+# Usage: helm install observeflow ./helm/observeflow -f ./helm/observeflow/values-local.yaml
+#
+# Images are pulled from Docker Hub (public). No AWS or local build required.
+# ============================================================================
+
+global:
+  namespace: observeflow
+  imageTag: "latest"
+
+frontend:
+  image:
+    repository: vanshshah174/observeflow-frontend-service
+    pullPolicy: IfNotPresent
+  service:
+    type: NodePort
+    nodePort: 30000
+
+productService:
+  image:
+    repository: vanshshah174/observeflow-product-service
+    pullPolicy: IfNotPresent
+
+cartService:
+  image:
+    repository: vanshshah174/observeflow-cart-service
+    pullPolicy: IfNotPresent
+
+orderService:
+  image:
+    repository: vanshshah174/observeflow-order-service
+    pullPolicy: IfNotPresent
+
+userService:
+  image:
+    repository: vanshshah174/observeflow-user-service
+    pullPolicy: IfNotPresent
+
+notificationService:
+  image:
+    repository: vanshshah174/observeflow-notification-service
+    pullPolicy: IfNotPresent
+
+inventoryService:
+  image:
+    repository: vanshshah174/observeflow-inventory-service
+    pullPolicy: IfNotPresent
+
+# No Gateway API locally — use NodePort for frontend access
+gateway:
+  enabled: false
+
+observability:
+  enabled: false
+
+karpenter:
+  enabled: false

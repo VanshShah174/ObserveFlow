@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.notificationService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.notificationService.name }}
+    {{- include "observeflow.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.notificationService.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.notificationService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.notificationService.name }}
+    spec:
+      serviceAccountName: observeflow-sa
+      containers:
+        - name: {{ .Values.notificationService.name }}
+          image: "{{ .Values.notificationService.image.repository }}:{{ .Values.notificationService.image.tag | default .Values.global.imageTag }}"
+          imagePullPolicy: {{ .Values.notificationService.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - containerPort: {{ .Values.notificationService.port }}
+          env:
+            - name: PORT
+              value: {{ .Values.notificationService.port | quote }}
+          resources:
+            {{- toYaml .Values.notificationService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.notificationService.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.notificationService.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5

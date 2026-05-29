@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.productService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.productService.name }}
+    {{- include "observeflow.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Values.productService.name }}
+  ports:
+    - port: {{ .Values.productService.port }}
+      targetPort: {{ .Values.productService.port }}
+      protocol: TCP

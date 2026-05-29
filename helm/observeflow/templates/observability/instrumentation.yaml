@@ -1,0 +1,4 @@
+{{- if .Values.observability.enabled }}
+# OpenTelemetry auto-instrumentation configuration
+# Injects OTel SDK into pods automatically via annotations
+{{- end }}

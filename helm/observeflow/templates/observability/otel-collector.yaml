@@ -1,0 +1,5 @@
+{{- if .Values.observability.enabled }}
+# ADOT Collector configuration will be added here
+# Deploys as a DaemonSet to collect traces, metrics, and logs from all pods
+# Exports to: X-Ray (traces), CloudWatch (logs), AMP (metrics)
+{{- end }}

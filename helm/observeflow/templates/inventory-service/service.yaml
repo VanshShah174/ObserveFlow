@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.inventoryService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.inventoryService.name }}
+    {{- include "observeflow.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Values.inventoryService.name }}
+  ports:
+    - port: {{ .Values.inventoryService.port }}
+      targetPort: {{ .Values.inventoryService.port }}
+      protocol: TCP

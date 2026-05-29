@@ -1,0 +1,22 @@
+{{- if .Values.karpenter.enabled }}
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: observeflow-ec2nodeclass
+  labels:
+    {{- include "observeflow.labels" . | nindent 4 }}
+spec:
+  role: {{ .Values.karpenter.instanceProfile }}
+  amiSelectorTerms:
+    - alias: al2023@latest
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: {{ .Values.karpenter.clusterName }}
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: {{ .Values.karpenter.clusterName }}
+  tags:
+    Name: observeflow-karpenter-node
+    Project: ObserveFlow
+    ManagedBy: Karpenter
+{{- end }}

@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.productService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.productService.name }}
+    {{- include "observeflow.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.productService.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.productService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.productService.name }}
+    spec:
+      serviceAccountName: observeflow-sa
+      containers:
+        - name: {{ .Values.productService.name }}
+          image: "{{ .Values.productService.image.repository }}:{{ .Values.productService.image.tag | default .Values.global.imageTag }}"
+          imagePullPolicy: {{ .Values.productService.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - containerPort: {{ .Values.productService.port }}
+          env:
+            - name: PORT
+              value: {{ .Values.productService.port | quote }}
+          resources:
+            {{- toYaml .Values.productService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.productService.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.productService.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5

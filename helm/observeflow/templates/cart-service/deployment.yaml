@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.cartService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.cartService.name }}
+    {{- include "observeflow.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.cartService.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.cartService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.cartService.name }}
+    spec:
+      serviceAccountName: observeflow-sa
+      containers:
+        - name: {{ .Values.cartService.name }}
+          image: "{{ .Values.cartService.image.repository }}:{{ .Values.cartService.image.tag | default .Values.global.imageTag }}"
+          imagePullPolicy: {{ .Values.cartService.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - containerPort: {{ .Values.cartService.port }}
+          env:
+            - name: PORT
+              value: {{ .Values.cartService.port | quote }}
+          resources:
+            {{- toYaml .Values.cartService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.cartService.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.cartService.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5

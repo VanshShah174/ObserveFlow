@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.orderService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.orderService.name }}
+    {{- include "observeflow.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.orderService.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.orderService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.orderService.name }}
+    spec:
+      serviceAccountName: observeflow-sa
+      containers:
+        - name: {{ .Values.orderService.name }}
+          image: "{{ .Values.orderService.image.repository }}:{{ .Values.orderService.image.tag | default .Values.global.imageTag }}"
+          imagePullPolicy: {{ .Values.orderService.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - containerPort: {{ .Values.orderService.port }}
+          env:
+            - name: PORT
+              value: {{ .Values.orderService.port | quote }}
+            {{- range $key, $value := .Values.orderService.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.orderService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.orderService.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.orderService.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5

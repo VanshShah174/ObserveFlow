@@ -1,0 +1,70 @@
+# ============================================================================
+# DEV VALUES — AWS EKS deployment
+# Usage: helm install observeflow ./helm/observeflow -f ./helm/observeflow/values-dev.yaml
+# ============================================================================
+
+global:
+  namespace: observeflow
+  imageTag: "v1.0.0"  # Updated by CI/CD pipeline
+
+# ECR image repositories (replace <ACCOUNT_ID> and <REGION>)
+frontend:
+  replicas: 2
+  image:
+    repository: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/observeflow/frontend-service
+    pullPolicy: Always
+
+productService:
+  replicas: 2
+  image:
+    repository: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/observeflow/product-service
+    pullPolicy: Always
+
+cartService:
+  replicas: 2
+  image:
+    repository: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/observeflow/cart-service
+    pullPolicy: Always
+
+orderService:
+  replicas: 2
+  image:
+    repository: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/observeflow/order-service
+    pullPolicy: Always
+
+userService:
+  replicas: 2
+  image:
+    repository: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/observeflow/user-service
+    pullPolicy: Always
+
+notificationService:
+  replicas: 2
+  image:
+    repository: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/observeflow/notification-service
+    pullPolicy: Always
+
+inventoryService:
+  replicas: 2
+  image:
+    repository: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/observeflow/inventory-service
+    pullPolicy: Always
+
+# Gateway API enabled on EKS
+gateway:
+  enabled: true
+  className: amazon-vpc-lattice
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+
+# Observability enabled on EKS
+observability:
+  enabled: true
+
+# Karpenter NodePool + EC2NodeClass
+karpenter:
+  enabled: true
+  clusterName: observeflow-eks
+  instanceProfile: observeflow-karpenter-node-profile

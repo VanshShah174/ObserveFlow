@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.cartService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.cartService.name }}
+    {{- include "observeflow.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Values.cartService.name }}
+  ports:
+    - port: {{ .Values.cartService.port }}
+      targetPort: {{ .Values.cartService.port }}
+      protocol: TCP

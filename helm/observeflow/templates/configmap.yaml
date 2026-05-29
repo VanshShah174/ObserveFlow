@@ -1,0 +1,15 @@
+# Shared configuration across services
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: observeflow-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "observeflow.labels" . | nindent 4 }}
+data:
+  PRODUCT_SERVICE_URL: "http://{{ .Values.productService.name }}:{{ .Values.productService.port }}"
+  CART_SERVICE_URL: "http://{{ .Values.cartService.name }}:{{ .Values.cartService.port }}"
+  ORDER_SERVICE_URL: "http://{{ .Values.orderService.name }}:{{ .Values.orderService.port }}"
+  USER_SERVICE_URL: "http://{{ .Values.userService.name }}:{{ .Values.userService.port }}"
+  NOTIFICATION_SERVICE_URL: "http://{{ .Values.notificationService.name }}:{{ .Values.notificationService.port }}"
+  INVENTORY_SERVICE_URL: "http://{{ .Values.inventoryService.name }}:{{ .Values.inventoryService.port }}"
