@@ -1,0 +1,355 @@
+# ==============================================================
+# ObserveFlow — CI Pipeline
+# ==============================================================
+# Triggers on push/PR to main branch (app code changes only)
+#
+# Stages:
+#   1. Detect Changes  → dynamic service detection
+#   2. Lint            → ESLint per changed service
+#   3. SCA             → npm audit per changed service
+#   4. Hadolint        → Dockerfile lint per changed service
+#   5. Build + Trivy   → build image + CVE scan
+#   6. Push            → ECR + Docker Hub
+#   7. Update Helm     → update values-dev.yaml → ArgoCD
+# ==============================================================
+
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # Job 1: Detect which services changed (dynamic — no hardcoded list)
+  # ─────────────────────────────────────────────────────────────
+  detect-changes:
+    name: Detect Changed Services
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      has-changes: ${{ steps.set-matrix.outputs.has-changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect changed services dynamically
+        id: set-matrix
+        run: |
+          # Handle first commit case (no HEAD~1 available)
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            CHANGED=$(git diff --name-only HEAD~1 HEAD \
+              | grep '^src/' \
+              | cut -d'/' -f2 \
+              | sort -u \
+              | jq -R . \
+              | jq -sc .)
+          else
+            # First commit — build all services
+            CHANGED=$(ls src/ \
+              | jq -R . \
+              | jq -sc .)
+          fi
+
+          echo "Changed: $CHANGED"
+          echo "matrix=$CHANGED" >> $GITHUB_OUTPUT
+
+          if [ "$CHANGED" = "[]" ]; then
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+          fi
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 2: ESLint — code quality per changed service
+  # ─────────────────────────────────────────────────────────────
+  lint:
+    name: "ESLint — ${{ matrix.service }}"
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check package.json exists
+        id: check-pkg
+        run: |
+          if [ ! -f "./src/${{ matrix.service }}/package.json" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js
+        if: steps.check-pkg.outputs.skip == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "src/${{ matrix.service }}/package-lock.json"
+
+      - name: Install dependencies
+        if: steps.check-pkg.outputs.skip == 'false'
+        working-directory: src/${{ matrix.service }}
+        run: npm install
+
+      - name: Run ESLint
+        if: steps.check-pkg.outputs.skip == 'false'
+        working-directory: src/${{ matrix.service }}
+        run: npm run lint || true
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 3: SCA — npm audit per changed service
+  # ─────────────────────────────────────────────────────────────
+  sca:
+    name: "npm audit — ${{ matrix.service }}"
+    runs-on: ubuntu-latest
+    needs: [detect-changes, lint]
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check package.json exists
+        id: check-pkg
+        run: |
+          if [ ! -f "./src/${{ matrix.service }}/package.json" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js
+        if: steps.check-pkg.outputs.skip == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "src/${{ matrix.service }}/package-lock.json"
+
+      - name: Install dependencies
+        if: steps.check-pkg.outputs.skip == 'false'
+        working-directory: src/${{ matrix.service }}
+        run: npm install
+
+      - name: Run npm audit
+        if: steps.check-pkg.outputs.skip == 'false'
+        working-directory: src/${{ matrix.service }}
+        run: npm audit --audit-level=high || true
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 4: Hadolint — Dockerfile lint per changed service
+  # ─────────────────────────────────────────────────────────────
+  hadolint:
+    name: "Hadolint — ${{ matrix.service }}"
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Dockerfile exists
+        id: check-dockerfile
+        run: |
+          if [ ! -f "./src/${{ matrix.service }}/Dockerfile" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Hadolint
+        if: steps.check-dockerfile.outputs.skip == 'false'
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: src/${{ matrix.service }}/Dockerfile
+          failure-threshold: warning
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 5: Build + Trivy scan
+  # Build image first, scan before pushing
+  # ─────────────────────────────────────────────────────────────
+  build-and-scan:
+    name: "Build + Trivy — ${{ matrix.service }}"
+    runs-on: ubuntu-latest
+    needs: [detect-changes, lint, sca, hadolint]
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Dockerfile exists
+        id: check-dockerfile
+        run: |
+          if [ ! -f "./src/${{ matrix.service }}/Dockerfile" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.check-dockerfile.outputs.skip == 'false'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image for scanning
+        if: steps.check-dockerfile.outputs.skip == 'false'
+        run: |
+          docker build \
+            -t observeflow-${{ matrix.service }}:scan \
+            ./src/${{ matrix.service }}
+
+      - name: Run Trivy vulnerability scan
+        if: steps.check-dockerfile.outputs.skip == 'false'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "observeflow-${{ matrix.service }}:scan"
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
+          timeout: "10m"
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 6: Push to ECR + Docker Hub
+  # Only on push to main — not on PRs
+  # ─────────────────────────────────────────────────────────────
+  push:
+    name: "Push — ${{ matrix.service }}"
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build-and-scan]
+    if: |
+      needs.detect-changes.outputs.has-changes == 'true' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Dockerfile exists
+        id: check-dockerfile
+        run: |
+          if [ ! -f "./src/${{ matrix.service }}/Dockerfile" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure AWS credentials via OIDC
+        if: steps.check-dockerfile.outputs.skip == 'false'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        if: steps.check-dockerfile.outputs.skip == 'false'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Login to Docker Hub
+        if: steps.check-dockerfile.outputs.skip == 'false'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Define image tags
+        if: steps.check-dockerfile.outputs.skip == 'false'
+        run: |
+          SHA_TAG=sha-${GITHUB_SHA::7}
+          ECR_BASE="${{ steps.login-ecr.outputs.registry }}/observeflow/${{ matrix.service }}"
+          HUB_BASE="vanshshah174/observeflow-${{ matrix.service }}"
+          echo "SHA_TAG=$SHA_TAG" >> $GITHUB_ENV
+          echo "ECR_BASE=$ECR_BASE" >> $GITHUB_ENV
+          echo "HUB_BASE=$HUB_BASE" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        if: steps.check-dockerfile.outputs.skip == 'false'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push to ECR + Docker Hub
+        if: steps.check-dockerfile.outputs.skip == 'false'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./src/${{ matrix.service }}
+          file: ./src/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ECR_BASE }}:${{ env.SHA_TAG }}
+            ${{ env.ECR_BASE }}:latest
+            ${{ env.HUB_BASE }}:${{ env.SHA_TAG }}
+            ${{ env.HUB_BASE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 7: Update Helm values → triggers ArgoCD
+  # ─────────────────────────────────────────────────────────────
+  update-helm-tag:
+    name: Update Helm Values
+    runs-on: ubuntu-latest
+    needs: push
+    if: |
+      needs.push.result == 'success' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Git auth
+        run: |
+          git config --global user.name "ci-bot"
+          git config --global user.email "ci-bot@observeflow.dev"
+          git remote set-url origin \
+            https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+
+      - name: Update image tag in values-dev.yaml
+        run: |
+          SHA_TAG=sha-${GITHUB_SHA::7}
+          sed -i "s|imageTag:.*|imageTag: \"$SHA_TAG\"|" \
+            helm/observeflow/values-dev.yaml
+
+      - name: Commit and push
+        run: |
+          SHA_TAG=sha-${GITHUB_SHA::7}
+          git add helm/observeflow/values-dev.yaml
+          git diff --staged --quiet || \
+            git commit -m "ci: update image tag to $SHA_TAG [skip ci]"
+          git push origin main
