@@ -37,6 +37,7 @@ npm-debug.log*
 
 # Misc
 .qodo/
+docs/
 
 # Terraform
 .terraform/
