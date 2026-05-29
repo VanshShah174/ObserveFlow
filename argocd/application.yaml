@@ -1,0 +1,54 @@
+# ==============================================================
+# ArgoCD Application — ObserveFlow
+# ==============================================================
+# This manifest tells ArgoCD:
+#   - WHERE to find the Helm chart (this repo, helm/observeflow/)
+#   - WHICH values file to use (values-dev.yaml for EKS)
+#   - WHERE to deploy (observeflow namespace on the cluster)
+#   - HOW to sync (automated, self-healing, auto-prune)
+#
+# Apply this ONCE after ArgoCD is installed on EKS:
+#   kubectl apply -f argocd/application.yaml
+#
+# After that, ArgoCD watches the repo and auto-deploys on any
+# change to helm/observeflow/ (templates or values-dev.yaml).
+# ==============================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: observeflow
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  # Source — where ArgoCD pulls the chart from
+  source:
+    repoURL: https://github.com/VanshShah174/ObserveFlow.git
+    targetRevision: main
+    path: helm/observeflow
+    helm:
+      valueFiles:
+        - values-dev.yaml
+
+  # Destination — where ArgoCD deploys to
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observeflow
+
+  # Sync policy — fully automated GitOps
+  syncPolicy:
+    automated:
+      prune: true       # Delete resources removed from git
+      selfHeal: true    # Revert manual changes made outside git
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
