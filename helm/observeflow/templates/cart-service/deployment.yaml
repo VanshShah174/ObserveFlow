@@ -15,6 +15,10 @@ spec:
     metadata:
       labels:
         app: {{ .Values.cartService.name }}
+      {{- if .Values.observability.enabled }}
+      annotations:
+        instrumentation.opentelemetry.io/inject-nodejs: "true"
+      {{- end }}
     spec:
       serviceAccountName: observeflow-sa
       containers:

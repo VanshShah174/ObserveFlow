@@ -1,4 +1,25 @@
 {{- if .Values.observability.enabled }}
-# ServiceMonitor for Prometheus scraping
-# Targets all services with /health or /metrics endpoints
+# ==============================================================
+# ServiceMonitor — tells Prometheus what to scrape
+# ==============================================================
+# Scrapes the OTel Collector's Prometheus exporter endpoint
+# which exposes all application metrics received via OTLP
+# ==============================================================
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: otel-collector-monitor
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: otel-collector
+    {{- include "observeflow.labels" . | nindent 4 }}
+    release: observeflow
+spec:
+  selector:
+    matchLabels:
+      app: otel-collector
+  endpoints:
+    - port: prometheus
+      interval: 15s
+      path: /metrics
 {{- end }}

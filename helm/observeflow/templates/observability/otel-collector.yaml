@@ -1,5 +1,161 @@
 {{- if .Values.observability.enabled }}
-# ADOT Collector configuration will be added here
-# Deploys as a DaemonSet to collect traces, metrics, and logs from all pods
-# Exports to: X-Ray (traces), CloudWatch (logs), AMP (metrics)
+# ==============================================================
+# OpenTelemetry Collector
+# ==============================================================
+# Central telemetry pipeline:
+#   Receives → traces, metrics, logs from all services (OTLP)
+#   Exports  → Jaeger (traces), Prometheus (metrics), Loki (logs)
+# ==============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "observeflow.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+        timeout: 5s
+        send_batch_size: 1024
+      memory_limiter:
+        check_interval: 5s
+        limit_mib: 256
+        spike_limit_mib: 64
+      resource:
+        attributes:
+          - key: cluster.name
+            value: observeflow
+            action: upsert
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+
+    exporters:
+      # Traces → Jaeger
+      otlp/jaeger:
+        endpoint: {{ .Values.observability.jaeger.collectorEndpoint | default "jaeger-collector:4317" }}
+        tls:
+          insecure: true
+
+      # Metrics → Prometheus (exposes scrape endpoint)
+      prometheus:
+        endpoint: 0.0.0.0:8889
+        namespace: observeflow
+
+      # Logs → Loki
+      loki:
+        endpoint: {{ .Values.observability.loki.endpoint | default "http://loki:3100/loki/api/v1/push" }}
+
+      # Debug output (useful for troubleshooting)
+      debug:
+        verbosity: basic
+
+    service:
+      extensions: [health_check]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, resource]
+          exporters: [otlp/jaeger, debug]
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, resource]
+          exporters: [prometheus, debug]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, resource]
+          exporters: [loki, debug]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: otel-collector
+    {{- include "observeflow.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      containers:
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.108.0
+          ports:
+            - containerPort: 4317   # OTLP gRPC
+              name: otlp-grpc
+            - containerPort: 4318   # OTLP HTTP
+              name: otlp-http
+            - containerPort: 8889   # Prometheus metrics
+              name: prometheus
+            - containerPort: 13133  # Health check
+              name: health
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otelcol-contrib/config.yaml
+              subPath: config.yaml
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 13133
+            initialDelaySeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 13133
+            initialDelaySeconds: 5
+      volumes:
+        - name: config
+          configMap:
+            name: otel-collector-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: otel-collector
+    {{- include "observeflow.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: otel-collector
+  ports:
+    - port: 4317
+      targetPort: 4317
+      name: otlp-grpc
+    - port: 4318
+      targetPort: 4318
+      name: otlp-http
+    - port: 8889
+      targetPort: 8889
+      name: prometheus
+    - port: 13133
+      targetPort: 13133
+      name: health
 {{- end }}

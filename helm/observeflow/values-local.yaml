@@ -51,8 +51,9 @@ inventoryService:
 gateway:
   enabled: false
 
+# Observability enabled for local demo
 observability:
-  enabled: false
+  enabled: true
 
 karpenter:
   enabled: false

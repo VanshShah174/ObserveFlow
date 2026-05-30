@@ -135,6 +135,54 @@ gateway:
 # ---- OBSERVABILITY ----
 observability:
   enabled: false
+  otelCollector:
+    endpoint: "otel-collector:4317"
+  jaeger:
+    collectorEndpoint: "observeflow-jaeger-all-in-one:4317"
+  loki:
+    endpoint: "http://observeflow-loki:3100/loki/api/v1/push"
+
+# Subchart overrides (only applied when observability.enabled = true)
+kube-prometheus-stack:
+  grafana:
+    adminPassword: admin
+    sidecar:
+      datasources:
+        enabled: true
+        label: grafana_datasource
+  prometheus:
+    prometheusSpec:
+      serviceMonitorSelectorNilUsesHelmValues: false
+
+loki:
+  deploymentMode: SingleBinary
+  loki:
+    auth_enabled: false
+    commonConfig:
+      replication_factor: 1
+    storage:
+      type: filesystem
+  singleBinary:
+    replicas: 1
+
+jaeger:
+  provisionDataStore:
+    cassandra: false
+  allInOne:
+    enabled: true
+  storage:
+    type: memory
+  collector:
+    enabled: false
+  query:
+    enabled: false
+  agent:
+    enabled: false
+
+opentelemetry-operator:
+  manager:
+    collectorImage:
+      repository: otel/opentelemetry-collector-contrib
 
 # ---- KARPENTER ----
 karpenter:
