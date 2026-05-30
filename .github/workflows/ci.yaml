@@ -291,7 +291,7 @@ jobs:
         run: |
           SHA_TAG=sha-${GITHUB_SHA::7}
           ECR_BASE="${{ steps.login-ecr.outputs.registry }}/observeflow/${{ matrix.service }}"
-          HUB_BASE="vanshshah174/observeflow-${{ matrix.service }}"
+          HUB_BASE="vanshshah17/observeflow-${{ matrix.service }}"
           echo "SHA_TAG=$SHA_TAG" >> $GITHUB_ENV
           echo "ECR_BASE=$ECR_BASE" >> $GITHUB_ENV
           echo "HUB_BASE=$HUB_BASE" >> $GITHUB_ENV

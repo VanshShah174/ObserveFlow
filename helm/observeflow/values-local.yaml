@@ -11,7 +11,7 @@ global:
 
 frontend:
   image:
-    repository: vanshshah174/observeflow-frontend-service
+    repository: vanshshah17/observeflow-frontend-service
     pullPolicy: IfNotPresent
   service:
     type: NodePort
@@ -19,32 +19,32 @@ frontend:
 
 productService:
   image:
-    repository: vanshshah174/observeflow-product-service
+    repository: vanshshah17/observeflow-product-service
     pullPolicy: IfNotPresent
 
 cartService:
   image:
-    repository: vanshshah174/observeflow-cart-service
+    repository: vanshshah17/observeflow-cart-service
     pullPolicy: IfNotPresent
 
 orderService:
   image:
-    repository: vanshshah174/observeflow-order-service
+    repository: vanshshah17/observeflow-order-service
     pullPolicy: IfNotPresent
 
 userService:
   image:
-    repository: vanshshah174/observeflow-user-service
+    repository: vanshshah17/observeflow-user-service
     pullPolicy: IfNotPresent
 
 notificationService:
   image:
-    repository: vanshshah174/observeflow-notification-service
+    repository: vanshshah17/observeflow-notification-service
     pullPolicy: IfNotPresent
 
 inventoryService:
   image:
-    repository: vanshshah174/observeflow-inventory-service
+    repository: vanshshah17/observeflow-inventory-service
     pullPolicy: IfNotPresent
 
 # No Gateway API locally — use NodePort for frontend access
