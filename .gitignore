@@ -39,7 +39,10 @@ npm-debug.log*
 .qodo/
 docs/
 
-# Terraform
+# Helm
+helm/*/charts/
+helm/*/Chart.lock
+*.tgz
 .terraform/
 *.tfstate
 *.tfstate.backup

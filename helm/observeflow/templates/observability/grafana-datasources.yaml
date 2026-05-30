@@ -29,7 +29,7 @@ data:
       - name: Loki
         type: loki
         access: proxy
-        url: http://observeflow-loki:3100
+        url: http://observeflow-loki-gateway.default.svc.cluster.local
         editable: false
         jsonData:
           derivedFields:
@@ -42,7 +42,7 @@ data:
       - name: Jaeger
         type: jaeger
         access: proxy
-        url: http://observeflow-jaeger-all-in-one:16686
+        url: http://observeflow-jaeger-query.default.svc.cluster.local:16686
         uid: jaeger
         editable: false
 {{- end }}

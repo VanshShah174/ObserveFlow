@@ -1,0 +1,38 @@
+# ==============================================================
+# OpenTelemetry Auto-Instrumentation CR
+# ==============================================================
+# Apply AFTER helm install (OTel Operator must be running first):
+#   kubectl apply -f helm/observeflow/instrumentation-cr.yaml
+#
+# Then restart deployments to pick up instrumentation:
+#   kubectl rollout restart deployment -n observeflow
+# ==============================================================
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: observeflow-instrumentation
+  namespace: observeflow
+spec:
+  exporter:
+    endpoint: http://otel-collector.observeflow.svc.cluster.local:4317
+  propagators:
+    - tracecontext
+    - baggage
+  sampler:
+    type: parentbased_traceidratio
+    argument: "1"
+
+  nodejs:
+    env:
+      - name: OTEL_NODE_ENABLED_INSTRUMENTATIONS
+        value: "http,express,dns,net"
+
+  python:
+    env:
+      - name: OTEL_PYTHON_EXCLUDED_URLS
+        value: "health"
+
+  java:
+    env:
+      - name: OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED
+        value: "true"

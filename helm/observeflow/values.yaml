@@ -138,9 +138,9 @@ observability:
   otelCollector:
     endpoint: "otel-collector:4317"
   jaeger:
-    collectorEndpoint: "observeflow-jaeger-all-in-one:4317"
+    collectorEndpoint: "observeflow-jaeger-collector.default.svc.cluster.local:4317"
   loki:
-    endpoint: "http://observeflow-loki:3100/loki/api/v1/push"
+    endpoint: "http://observeflow-loki-gateway.default.svc.cluster.local/loki/api/v1/push"
 
 # Subchart overrides (only applied when observability.enabled = true)
 kube-prometheus-stack:
@@ -150,6 +150,7 @@ kube-prometheus-stack:
       datasources:
         enabled: true
         label: grafana_datasource
+        searchNamespace: ALL
   prometheus:
     prometheusSpec:
       serviceMonitorSelectorNilUsesHelmValues: false
@@ -158,12 +159,19 @@ loki:
   deploymentMode: SingleBinary
   loki:
     auth_enabled: false
+    useTestSchema: true
     commonConfig:
       replication_factor: 1
     storage:
       type: filesystem
   singleBinary:
     replicas: 1
+  read:
+    replicas: 0
+  write:
+    replicas: 0
+  backend:
+    replicas: 0
 
 jaeger:
   provisionDataStore:

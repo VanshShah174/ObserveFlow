@@ -1,45 +1,9 @@
-{{- if .Values.observability.enabled }}
-# ==============================================================
-# OpenTelemetry Auto-Instrumentation Configuration
-# ==============================================================
-# The OTel Operator watches for pods with specific annotations
-# and injects the appropriate language SDK at startup.
-#
-# Supported annotations on deployments:
-#   instrumentation.opentelemetry.io/inject-nodejs: "true"
-#   instrumentation.opentelemetry.io/inject-python: "true"
-#   instrumentation.opentelemetry.io/inject-java: "true"
-# ==============================================================
-apiVersion: opentelemetry.io/v1alpha1
-kind: Instrumentation
-metadata:
-  name: observeflow-instrumentation
-  namespace: {{ .Values.global.namespace }}
-spec:
-  exporter:
-    endpoint: http://otel-collector.{{ .Values.global.namespace }}.svc.cluster.local:4317
-  propagators:
-    - tracecontext
-    - baggage
-  sampler:
-    type: parentbased_traceidratio
-    argument: "1"  # 100% sampling for demo (reduce in production)
-
-  # Node.js auto-instrumentation config
-  nodejs:
-    env:
-      - name: OTEL_NODE_ENABLED_INSTRUMENTATIONS
-        value: "http,express,dns,net"
-
-  # Python auto-instrumentation config
-  python:
-    env:
-      - name: OTEL_PYTHON_EXCLUDED_URLS
-        value: "health"
-
-  # Java auto-instrumentation config
-  java:
-    env:
-      - name: OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED
-        value: "true"
-{{- end }}
+{{/*
+  Instrumentation CR is NOT deployed with helm install.
+  It must be applied AFTER the OTel Operator is running:
+  
+  kubectl apply -f D:\ObservaFlow\helm\observeflow\instrumentation-cr.yaml
+  
+  This is because the OTel Operator webhook needs to be ready
+  before it can validate/mutate Instrumentation resources.
+*/}}
