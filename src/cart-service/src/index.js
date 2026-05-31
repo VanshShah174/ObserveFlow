@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const { itemsAddedCounter, currentItemsGauge, operationDuration } = require("./metrics");
 
 const app = express();
 const PORT = process.env.PORT || 4001;
@@ -34,13 +35,22 @@ app.get("/health", (req, res) => {
 
 // Get cart for user
 app.get("/cart/:userId", (req, res) => {
+  const start = performance.now();
+
   const { userId } = req.params;
   const cart = carts[userId] || { userId, items: [] };
+
+  // Record histogram — how long this operation took
+  const duration = (performance.now() - start) / 1000;
+  operationDuration.record(duration, { operation: "get_cart" });
+
   res.json(cart);
 });
 
 // Add item to cart
 app.post("/cart/:userId/items", (req, res) => {
+  const start = performance.now();
+
   const { userId } = req.params;
   const { productId, name, price, quantity } = req.body;
 
@@ -65,11 +75,23 @@ app.post("/cart/:userId/items", (req, res) => {
     });
   }
 
+  // Record COUNTER — item was added
+  itemsAddedCounter.add(1, { product_id: productId, user_id: userId });
+
+  // Record GAUGE — current items increased
+  currentItemsGauge.add(quantity || 1);
+
+  // Record HISTOGRAM — operation duration
+  const duration = (performance.now() - start) / 1000;
+  operationDuration.record(duration, { operation: "add_item" });
+
   res.status(201).json(carts[userId]);
 });
 
 // Remove item from cart
 app.delete("/cart/:userId/items/:itemId", (req, res) => {
+  const start = performance.now();
+
   const { userId, itemId } = req.params;
 
   if (!carts[userId]) {
@@ -81,7 +103,17 @@ app.delete("/cart/:userId/items/:itemId", (req, res) => {
     return res.status(404).json({ error: "Item not found in cart" });
   }
 
+  const removedItem = carts[userId].items[itemIndex];
+
+  // Record GAUGE — current items decreased
+  currentItemsGauge.add(-(removedItem.quantity || 1));
+
   carts[userId].items.splice(itemIndex, 1);
+
+  // Record HISTOGRAM — operation duration
+  const duration = (performance.now() - start) / 1000;
+  operationDuration.record(duration, { operation: "remove_item" });
+
   res.json(carts[userId]);
 });
 
