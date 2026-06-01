@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +20,8 @@ type LogEntry struct {
 	Path       string `json:"path"`
 	StatusCode int    `json:"statusCode"`
 	DurationMs int64  `json:"durationMs"`
+	TraceID    string `json:"traceId"`
+	SpanID     string `json:"spanId"`
 }
 
 type Notification struct {
@@ -44,7 +47,7 @@ var (
 	counter       int64
 )
 
-func structuredLog(method, path string, statusCode int, duration time.Duration) {
+func structuredLog(method, path string, statusCode int, duration time.Duration, traceID, spanID string) {
 	entry := LogEntry{
 		Timestamp:  time.Now().UTC().Format(time.RFC3339),
 		Service:    "notification-service",
@@ -52,17 +55,34 @@ func structuredLog(method, path string, statusCode int, duration time.Duration) 
 		Path:       path,
 		StatusCode: statusCode,
 		DurationMs: duration.Milliseconds(),
+		TraceID:    traceID,
+		SpanID:     spanID,
 	}
 	data, _ := json.Marshal(entry)
 	fmt.Println(string(data))
 }
 
+// extractTraceContext parses the W3C traceparent header
+// Format: 00-<traceId>-<spanId>-<flags>
+func extractTraceContext(r *http.Request) (string, string) {
+	tp := r.Header.Get("traceparent")
+	if tp == "" {
+		return "", ""
+	}
+	parts := strings.Split(tp, "-")
+	if len(parts) >= 3 {
+		return parts[1], parts[2]
+	}
+	return "", ""
+}
+
 func loggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
+		traceID, spanID := extractTraceContext(r)
 		rw := &responseWriter{ResponseWriter: w, statusCode: 200}
 		next(rw, r)
-		structuredLog(r.Method, r.URL.Path, rw.statusCode, time.Since(start))
+		structuredLog(r.Method, r.URL.Path, rw.statusCode, time.Since(start), traceID, spanID)
 	}
 }
 

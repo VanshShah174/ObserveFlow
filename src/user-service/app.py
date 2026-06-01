@@ -5,6 +5,12 @@ from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
+# OTel API for trace correlation in logs
+try:
+    from opentelemetry import trace
+except ImportError:
+    trace = None
+
 app = Flask(__name__)
 CORS(app)
 
@@ -38,13 +44,25 @@ users = {
 
 
 def log_request(method, path, status_code, duration_ms):
+    # Extract trace context from OTel auto-instrumentation
+    trace_id = ""
+    span_id = ""
+    if trace:
+        span = trace.get_current_span()
+        ctx = span.get_span_context()
+        if ctx.trace_id:
+            trace_id = format(ctx.trace_id, '032x')
+            span_id = format(ctx.span_id, '016x')
+
     log_entry = {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "service": "user-service",
         "method": method,
         "path": path,
         "statusCode": status_code,
-        "durationMs": duration_ms
+        "durationMs": duration_ms,
+        "traceId": trace_id,
+        "spanId": span_id
     }
     print(json.dumps(log_entry), flush=True)
 

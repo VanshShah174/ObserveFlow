@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const { trace } = require("@opentelemetry/api");
 
 const app = express();
 const PORT = process.env.PORT || 4002;
@@ -8,10 +9,13 @@ const CART_SERVICE_URL = process.env.CART_SERVICE_URL || "http://localhost:4001"
 app.use(cors());
 app.use(express.json());
 
-// Structured JSON logging middleware
+// Structured JSON logging middleware (with trace correlation)
 app.use((req, res, next) => {
   const start = Date.now();
   res.on("finish", () => {
+    const span = trace.getActiveSpan();
+    const spanContext = span?.spanContext();
+
     const log = {
       timestamp: new Date().toISOString(),
       service: "order-service",
@@ -19,6 +23,8 @@ app.use((req, res, next) => {
       path: req.originalUrl,
       statusCode: res.statusCode,
       durationMs: Date.now() - start,
+      traceId: spanContext?.traceId || "",
+      spanId: spanContext?.spanId || "",
     };
     console.log(JSON.stringify(log));
   });
