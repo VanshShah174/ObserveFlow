@@ -1,0 +1,72 @@
+{{- if .Values.observability.enabled }}
+# ==============================================================
+# PrometheusRule — Alerting Rules for ObserveFlow
+# ==============================================================
+# Defines conditions that trigger alerts.
+# Alerts are visible in:
+#   - Prometheus UI → Alerts tab
+#   - Grafana → Alerting section
+#
+# To route alerts to email/Slack, configure Alertmanager separately.
+# ==============================================================
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: observeflow-alerts
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    release: observeflow
+    {{- include "observeflow.labels" . | nindent 4 }}
+spec:
+  groups:
+    - name: observeflow.rules
+      rules:
+        # Alert: High error rate (5xx responses > 1% for 5 minutes)
+        - alert: HighErrorRate
+          expr: |
+            (
+              sum(rate(observeflow_http_server_duration_milliseconds_count{http_status_code=~"5.."}[5m])) by (job)
+              /
+              sum(rate(observeflow_http_server_duration_milliseconds_count[5m])) by (job)
+            ) > 0.01
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High error rate on {{ "{{" }} $labels.job {{ "}}" }}"
+            description: "Service {{ "{{" }} $labels.job {{ "}}" }} has > 1% error rate for 5 minutes. Current: {{ "{{" }} $value | humanizePercentage {{ "}}" }}"
+
+        # Alert: High latency (P95 > 1000ms for 5 minutes)
+        - alert: HighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(observeflow_http_server_duration_milliseconds_bucket[5m])) by (le, job)
+            ) > 1000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High latency on {{ "{{" }} $labels.job {{ "}}" }}"
+            description: "Service {{ "{{" }} $labels.job {{ "}}" }} P95 latency > 1000ms for 5 minutes. Current: {{ "{{" }} $value | humanizeDuration {{ "}}" }}"
+
+        # Alert: Service not receiving requests (possible crash/network issue)
+        - alert: ServiceDown
+          expr: |
+            sum(rate(observeflow_http_server_duration_milliseconds_count[5m])) by (job) == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Service {{ "{{" }} $labels.job {{ "}}" }} is not receiving requests"
+            description: "No HTTP requests recorded for {{ "{{" }} $labels.job {{ "}}" }} in the last 5 minutes."
+
+        # Alert: Cart service custom metric — too many items in carts
+        - alert: CartOverload
+          expr: sum(observeflow_cart_items_current) > 100
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Cart overload detected"
+            description: "More than 100 items across all active carts. Possible bot activity or performance issue."
+{{- end }}
