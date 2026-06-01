@@ -28,6 +28,8 @@ spec:
           env:
             - name: PORT
               value: {{ .Values.notificationService.port | quote }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ .Values.notificationService.name }}
           resources:
             {{- toYaml .Values.notificationService.resources | nindent 12 }}
           livenessProbe:

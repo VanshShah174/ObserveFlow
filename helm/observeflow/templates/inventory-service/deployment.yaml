@@ -27,6 +27,9 @@ spec:
           imagePullPolicy: {{ .Values.inventoryService.image.pullPolicy | default "IfNotPresent" }}
           ports:
             - containerPort: {{ .Values.inventoryService.port }}
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: {{ .Values.inventoryService.name }}
           resources:
             {{- toYaml .Values.inventoryService.resources | nindent 12 }}
           livenessProbe:

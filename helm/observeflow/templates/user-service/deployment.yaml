@@ -27,6 +27,9 @@ spec:
           imagePullPolicy: {{ .Values.userService.image.pullPolicy | default "IfNotPresent" }}
           ports:
             - containerPort: {{ .Values.userService.port }}
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: {{ .Values.userService.name }}
           resources:
             {{- toYaml .Values.userService.resources | nindent 12 }}
           livenessProbe:

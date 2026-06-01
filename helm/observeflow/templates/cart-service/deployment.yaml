@@ -30,6 +30,8 @@ spec:
           env:
             - name: PORT
               value: {{ .Values.cartService.port | quote }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ .Values.cartService.name }}
           resources:
             {{- toYaml .Values.cartService.resources | nindent 12 }}
           livenessProbe:

@@ -30,6 +30,8 @@ spec:
           env:
             - name: PORT
               value: {{ .Values.productService.port | quote }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ .Values.productService.name }}
           resources:
             {{- toYaml .Values.productService.resources | nindent 12 }}
           livenessProbe:
