@@ -1,14 +1,14 @@
 {{- if .Values.observability.enabled }}
 # ==============================================================
-# Grafana Datasources — pre-configured for zero-setup demo
+# Grafana Datasources — Loki + Jaeger (additional)
 # ==============================================================
-# Grafana automatically loads these on startup.
-# No manual configuration needed during demo.
+# Prometheus is already provisioned by kube-prometheus-stack.
+# We only add Loki and Jaeger here.
 # ==============================================================
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-datasources
+  name: grafana-datasources-extra
   namespace: {{ .Values.global.namespace }}
   labels:
     grafana_datasource: "1"
@@ -17,19 +17,12 @@ data:
   datasources.yaml: |
     apiVersion: 1
     datasources:
-      # Prometheus — metrics
-      - name: Prometheus
-        type: prometheus
-        access: proxy
-        url: http://observeflow-kube-prometheus-stack-prometheus:9090
-        isDefault: true
-        editable: false
-
       # Loki — logs
       - name: Loki
         type: loki
         access: proxy
         url: http://observeflow-loki-gateway.default.svc.cluster.local
+        isDefault: false
         editable: false
         jsonData:
           derivedFields:
@@ -44,5 +37,6 @@ data:
         access: proxy
         url: http://observeflow-jaeger-query.default.svc.cluster.local:16686
         uid: jaeger
+        isDefault: false
         editable: false
 {{- end }}
