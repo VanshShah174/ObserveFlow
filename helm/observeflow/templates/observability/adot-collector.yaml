@@ -1,0 +1,208 @@
+{{- if .Values.observability.aws.enabled }}
+# ==============================================================
+# ADOT Collector — AWS Observability Stack
+# ==============================================================
+# DaemonSet that collects traces, metrics, and logs from all pods
+# and exports to AWS services:
+#   Traces  → X-Ray
+#   Metrics → Amazon Managed Prometheus (AMP)
+#   Logs    → CloudWatch Logs
+#
+# Uses Pod Identity for AWS permissions (no access keys).
+# ==============================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: adot-collector
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "observeflow.labels" . | nindent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: adot-collector-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: adot-collector
+    {{- include "observeflow.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+      sigv4auth:
+        region: {{ .Values.observability.aws.region }}
+        service: "aps"
+
+    receivers:
+      # Receive traces and metrics from auto-instrumented services
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+      # Read container logs from node filesystem
+      filelog:
+        include:
+          - /var/log/pods/{{ .Values.global.namespace }}_*/*/*.log
+        exclude:
+          - /var/log/pods/{{ .Values.global.namespace }}_adot-*/*/*.log
+        start_at: end
+        include_file_path: true
+        operators:
+          - type: regex_parser
+            id: extract_metadata
+            regex: '^.*\/(?P<namespace>[^_]+)_(?P<pod>[^\/]+)\/(?P<container>[^\/]+)\/.*.log$'
+            parse_from: attributes["log.file.path"]
+          - type: move
+            from: attributes.namespace
+            to: resource["k8s.namespace.name"]
+          - type: move
+            from: attributes.pod
+            to: resource["k8s.pod.name"]
+          - type: move
+            from: attributes.container
+            to: resource["k8s.container.name"]
+
+    processors:
+      batch:
+        timeout: 5s
+        send_batch_size: 1024
+      memory_limiter:
+        check_interval: 5s
+        limit_mib: 256
+        spike_limit_mib: 64
+      resource:
+        attributes:
+          - key: cluster.name
+            value: {{ .Values.observability.aws.clusterName }}
+            action: upsert
+
+    exporters:
+      # Traces → AWS X-Ray
+      awsxray:
+        region: {{ .Values.observability.aws.region }}
+
+      # Metrics → Amazon Managed Prometheus
+      prometheusremotewrite:
+        endpoint: {{ .Values.observability.aws.ampEndpoint }}api/v1/remote_write
+        auth:
+          authenticator: sigv4auth
+
+      # Logs → CloudWatch Logs
+      awscloudwatchlogs:
+        region: {{ .Values.observability.aws.region }}
+        log_group_name: {{ .Values.observability.aws.logGroupName }}
+        log_stream_name: "observeflow-${K8S_NODE_NAME}"
+
+    service:
+      extensions: [health_check, sigv4auth]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, resource]
+          exporters: [awsxray]
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, resource]
+          exporters: [prometheusremotewrite]
+        logs:
+          receivers: [filelog]
+          processors: [memory_limiter, batch, resource]
+          exporters: [awscloudwatchlogs]
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: adot-collector
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: adot-collector
+    {{- include "observeflow.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: adot-collector
+  template:
+    metadata:
+      labels:
+        app: adot-collector
+    spec:
+      serviceAccountName: adot-collector
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      containers:
+        - name: adot-collector
+          image: public.ecr.aws/aws-observability/aws-otel-collector:v0.40.0
+          args: ["--config=/opt/aws/aws-otel-collector/etc/config.yaml"]
+          env:
+            - name: K8S_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          ports:
+            - containerPort: 4317
+              name: otlp-grpc
+            - containerPort: 4318
+              name: otlp-http
+            - containerPort: 13133
+              name: health
+          volumeMounts:
+            - name: config
+              mountPath: /opt/aws/aws-otel-collector/etc/config.yaml
+              subPath: config.yaml
+            - name: varlogpods
+              mountPath: /var/log/pods
+              readOnly: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 13133
+            initialDelaySeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 13133
+            initialDelaySeconds: 5
+      volumes:
+        - name: config
+          configMap:
+            name: adot-collector-config
+        - name: varlogpods
+          hostPath:
+            path: /var/log/pods
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: adot-collector
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: adot-collector
+    {{- include "observeflow.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: adot-collector
+  ports:
+    - port: 4317
+      targetPort: 4317
+      name: otlp-grpc
+    - port: 4318
+      targetPort: 4318
+      name: otlp-http
+{{- end }}

@@ -5,66 +5,65 @@
 
 global:
   namespace: observeflow
-  imageTag: "v1.0.0"  # Updated by CI/CD pipeline
+  imageTag: "latest"
 
-# ECR image repositories (replace <ACCOUNT_ID> and <REGION>)
+# ECR image repositories
 frontend:
-  replicas: 2
+  replicas: 1
   image:
-    repository: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/observeflow/frontend-service
+    repository: 207446234524.dkr.ecr.us-east-1.amazonaws.com/observeflow/frontend-service
     pullPolicy: Always
 
 productService:
-  replicas: 2
+  replicas: 1
   image:
-    repository: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/observeflow/product-service
+    repository: 207446234524.dkr.ecr.us-east-1.amazonaws.com/observeflow/product-service
     pullPolicy: Always
 
 cartService:
-  replicas: 2
+  replicas: 1
   image:
-    repository: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/observeflow/cart-service
+    repository: 207446234524.dkr.ecr.us-east-1.amazonaws.com/observeflow/cart-service
     pullPolicy: Always
 
 orderService:
-  replicas: 2
+  replicas: 1
   image:
-    repository: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/observeflow/order-service
+    repository: 207446234524.dkr.ecr.us-east-1.amazonaws.com/observeflow/order-service
     pullPolicy: Always
 
 userService:
-  replicas: 2
+  replicas: 1
   image:
-    repository: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/observeflow/user-service
+    repository: 207446234524.dkr.ecr.us-east-1.amazonaws.com/observeflow/user-service
     pullPolicy: Always
 
 notificationService:
-  replicas: 2
+  replicas: 1
   image:
-    repository: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/observeflow/notification-service
+    repository: 207446234524.dkr.ecr.us-east-1.amazonaws.com/observeflow/notification-service
     pullPolicy: Always
 
 inventoryService:
-  replicas: 2
+  replicas: 1
   image:
-    repository: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/observeflow/inventory-service
+    repository: 207446234524.dkr.ecr.us-east-1.amazonaws.com/observeflow/inventory-service
     pullPolicy: Always
 
-# Gateway API enabled on EKS
+# Gateway API — disabled until AWS Gateway API Controller is installed
 gateway:
-  enabled: true
-  className: amazon-vpc-lattice
-  listeners:
-    - name: http
-      port: 80
-      protocol: HTTP
+  enabled: false
 
-# Observability enabled on EKS
+# Observability — AWS mode (ADOT + managed services, no local stack)
 observability:
-  enabled: true
+  enabled: false  # Disables local stack (Jaeger, Loki, Prometheus, Grafana)
+  aws:
+    enabled: true
+    region: us-east-1
+    clusterName: observeflow-eks
+    ampEndpoint: "https://aps-workspaces.us-east-1.amazonaws.com/workspaces/ws-3c587827-a3f0-46e1-a760-89dd83109735/"
+    logGroupName: "/aws/eks/observeflow-eks/application"
 
-# Karpenter NodePool + EC2NodeClass
+# Karpenter — disabled until Karpenter Helm chart is installed
 karpenter:
-  enabled: true
-  clusterName: observeflow-eks
-  instanceProfile: observeflow-karpenter-node-profile
+  enabled: false

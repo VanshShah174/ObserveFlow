@@ -141,6 +141,12 @@ observability:
     collectorEndpoint: "observeflow-jaeger-collector.default.svc.cluster.local:4317"
   loki:
     endpoint: "http://observeflow-loki-gateway.default.svc.cluster.local/loki/api/v1/push"
+  aws:
+    enabled: false
+    region: "us-east-1"
+    clusterName: ""
+    ampEndpoint: ""
+    logGroupName: ""
 
 # Subchart overrides (only applied when observability.enabled = true)
 kube-prometheus-stack:
