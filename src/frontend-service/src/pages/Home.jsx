@@ -9,7 +9,7 @@ function Home() {
         <div style={styles.heroContent}>
           <div style={styles.heroBadge}>
             <span style={styles.badgeDot}></span>
-            Live Microservices Demo
+            Live Microservices Demo v2
           </div>
           <h1 style={styles.title}>
             Shop. Observe.<br />
