@@ -16,7 +16,7 @@ function Home() {
             <span style={styles.titleGradient}>Understand.</span>
           </h1>
           <p style={styles.subtitle}>
-            Experience a fully distributed e-commerce platform instrumented with
+            A fully distributed e-commerce platform instrumented with
             OpenTelemetry. Every click generates traces, metrics, and logs across
             6 polyglot microservices.
           </p>
