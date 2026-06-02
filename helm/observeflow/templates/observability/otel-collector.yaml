@@ -42,9 +42,9 @@ data:
         endpoint: 0.0.0.0:13133
 
     exporters:
-      # Traces → Jaeger
+      # Traces → Jaeger (allInOne mode creates service: <release>-jaeger-all-in-one)
       otlp/jaeger:
-        endpoint: {{ .Values.observability.jaeger.collectorEndpoint | default "jaeger-collector:4317" }}
+        endpoint: {{ .Release.Name }}-jaeger-all-in-one.{{ .Values.global.namespace }}.svc.cluster.local:4317
         tls:
           insecure: true
 
@@ -55,7 +55,7 @@ data:
 
       # Logs → Loki
       loki:
-        endpoint: {{ .Values.observability.loki.endpoint | default "http://loki:3100/loki/api/v1/push" }}
+        endpoint: http://{{ .Release.Name }}-loki-gateway.{{ .Values.global.namespace }}.svc.cluster.local/loki/api/v1/push
 
       # Debug output (useful for troubleshooting)
       debug:

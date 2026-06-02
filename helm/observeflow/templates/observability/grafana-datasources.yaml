@@ -21,21 +21,21 @@ data:
       - name: Loki
         type: loki
         access: proxy
-        url: http://observeflow-loki-gateway.default.svc.cluster.local
+        url: http://{{ .Release.Name }}-loki-gateway.{{ .Values.global.namespace }}.svc.cluster.local
         isDefault: false
         editable: false
         jsonData:
           derivedFields:
             - datasourceUid: jaeger
-              matcherRegex: "traceId=(\\w+)"
+              matcherRegex: '"traceId":"(\\w+)"'
               name: TraceID
               url: "$${__value.raw}"
 
-      # Jaeger — traces
+      # Jaeger — traces (allInOne mode: query is served by the same pod)
       - name: Jaeger
         type: jaeger
         access: proxy
-        url: http://observeflow-jaeger-query.default.svc.cluster.local:16686
+        url: http://{{ .Release.Name }}-jaeger-all-in-one.{{ .Values.global.namespace }}.svc.cluster.local:16686
         uid: jaeger
         isDefault: false
         editable: false

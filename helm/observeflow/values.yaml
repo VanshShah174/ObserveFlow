@@ -12,7 +12,7 @@ frontendService:
   name: frontend-service
   replicas: 1
   image:
-    repository: observeflow/frontend-service
+    repository: vanshshah17/observeflow-frontend-service
     tag: ""  # Falls back to global.imageTag
   port: 3000
   resources:
@@ -28,7 +28,7 @@ productService:
   name: product-service
   replicas: 1
   image:
-    repository: observeflow/product-service
+    repository: vanshshah17/observeflow-product-service
     tag: ""
   port: 4000
   resources:
@@ -44,7 +44,7 @@ cartService:
   name: cart-service
   replicas: 1
   image:
-    repository: observeflow/cart-service
+    repository: vanshshah17/observeflow-cart-service
     tag: ""
   port: 4001
   resources:
@@ -60,7 +60,7 @@ orderService:
   name: order-service
   replicas: 1
   image:
-    repository: observeflow/order-service
+    repository: vanshshah17/observeflow-order-service
     tag: ""
   port: 4002
   resources:
@@ -80,7 +80,7 @@ userService:
   name: user-service
   replicas: 1
   image:
-    repository: observeflow/user-service
+    repository: vanshshah17/observeflow-user-service
     tag: ""
   port: 4003
   resources:
@@ -96,7 +96,7 @@ notificationService:
   name: notification-service
   replicas: 1
   image:
-    repository: observeflow/notification-service
+    repository: vanshshah17/observeflow-notification-service
     tag: ""
   port: 4004
   resources:
@@ -112,7 +112,7 @@ inventoryService:
   name: inventory-service
   replicas: 1
   image:
-    repository: observeflow/inventory-service
+    repository: vanshshah17/observeflow-inventory-service
     tag: ""
   port: 4005
   resources:
@@ -134,13 +134,11 @@ gateway:
 
 # ---- OBSERVABILITY ----
 observability:
-  enabled: false
+  enabled: true
   otelCollector:
     endpoint: "otel-collector:4317"
-  jaeger:
-    collectorEndpoint: "observeflow-jaeger-collector.default.svc.cluster.local:4317"
-  loki:
-    endpoint: "http://observeflow-loki-gateway.default.svc.cluster.local/loki/api/v1/push"
+  # Jaeger/Loki endpoints are derived from .Release.Name in templates
+  # No need to configure them unless overriding subchart service names
   aws:
     enabled: false
     region: "us-east-1"

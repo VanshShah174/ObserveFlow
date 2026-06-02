@@ -1,9 +1,43 @@
-{{/*
-  Instrumentation CR is NOT deployed with helm install.
-  It must be applied AFTER the OTel Operator is running:
-  
-  kubectl apply -f D:\ObservaFlow\helm\observeflow\instrumentation-cr.yaml
-  
-  This is because the OTel Operator webhook needs to be ready
-  before it can validate/mutate Instrumentation resources.
-*/}}
+{{- if .Values.observability.enabled }}
+# ==============================================================
+# OpenTelemetry Auto-Instrumentation CR
+# ==============================================================
+# Deployed as a post-install/post-upgrade hook so the OTel Operator
+# webhook is ready before this resource is applied.
+# ==============================================================
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: observeflow-instrumentation
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "observeflow.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  exporter:
+    endpoint: http://otel-collector.{{ .Values.global.namespace }}.svc.cluster.local:4317
+  propagators:
+    - tracecontext
+    - baggage
+  sampler:
+    type: parentbased_traceidratio
+    argument: "1"
+
+  nodejs:
+    env:
+      - name: OTEL_NODE_ENABLED_INSTRUMENTATIONS
+        value: "http,express,dns,net"
+
+  python:
+    env:
+      - name: OTEL_PYTHON_EXCLUDED_URLS
+        value: "health"
+
+  java:
+    env:
+      - name: OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED
+        value: "true"
+{{- end }}
