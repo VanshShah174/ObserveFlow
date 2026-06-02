@@ -5,13 +5,14 @@
 
 global:
   namespace: observeflow
-  imageTag: "sha-d413aca"
+  imageTag: "latest"
 
 # ECR image repositories
 frontend:
   replicas: 1
   image:
     repository: 207446234524.dkr.ecr.us-east-1.amazonaws.com/observeflow/frontend-service
+    tag: "sha-d413aca"
     pullPolicy: Always
 
 productService:
