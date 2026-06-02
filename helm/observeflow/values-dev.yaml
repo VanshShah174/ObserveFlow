@@ -5,7 +5,7 @@
 
 global:
   namespace: observeflow
-  imageTag: "latest"
+  imageTag: "sha-d413aca"
 
 # ECR image repositories
 frontend:
