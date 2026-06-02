@@ -8,11 +8,63 @@
 # Application logs from all services
 resource "aws_cloudwatch_log_group" "application" {
   name              = "/aws/eks/${var.project_name}-eks/application"
-  retention_in_days = 7 # Keep costs low for dev
+  retention_in_days = 365 # 1 year retention (CKV_AWS_338)
+  kms_key_id        = aws_kms_key.cloudwatch.arn # Encrypted at rest (CKV_AWS_158)
 
   tags = {
     Name = "${var.project_name}-application-logs"
   }
+}
+
+# ---- KMS KEY FOR CLOUDWATCH LOGS ----
+resource "aws_kms_key" "cloudwatch" {
+  description             = "KMS key for CloudWatch Logs encryption"
+  deletion_window_in_days = 10
+  enable_key_rotation     = true
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "EnableRootAccountAccess"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::207446234524:root"
+        }
+        Action   = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "AllowCloudWatchLogs"
+        Effect = "Allow"
+        Principal = {
+          Service = "logs.${var.aws_region}.amazonaws.com"
+        }
+        Action = [
+          "kms:Encrypt*",
+          "kms:Decrypt*",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:Describe*"
+        ]
+        Resource = "*"
+        Condition = {
+          ArnLike = {
+            "kms:EncryptionContext:aws:logs:arn" = "arn:aws:logs:${var.aws_region}:207446234524:log-group:/aws/eks/${var.project_name}-eks/*"
+          }
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name = "${var.project_name}-cloudwatch-key"
+  }
+}
+
+resource "aws_kms_alias" "cloudwatch" {
+  name          = "alias/${var.project_name}-cloudwatch"
+  target_key_id = aws_kms_key.cloudwatch.key_id
 }
 
 # ---- AMAZON MANAGED PROMETHEUS (AMP) ----

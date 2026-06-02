@@ -24,6 +24,15 @@ resource "aws_eks_cluster" "main" {
     authentication_mode = "API_AND_CONFIG_MAP"
   }
 
+  # Control plane logging — all types enabled (CKV_AWS_37)
+  enabled_cluster_log_types = [
+    "api",
+    "audit",
+    "authenticator",
+    "controllerManager",
+    "scheduler"
+  ]
+
   depends_on = [
     aws_iam_role_policy_attachment.eks_cluster_policy,
     aws_iam_role_policy_attachment.eks_vpc_resource_controller,
@@ -119,13 +128,54 @@ resource "aws_security_group" "eks_cluster" {
     cidr_blocks = [var.vpc_cidr]
   }
 
-  # Allow all outbound (nodes need to pull images, call AWS APIs, etc.)
+  # Allow all outbound — EKS nodes need various ports (image pulls, AWS APIs, DNS, kubelet)
+  # Restricting egress to specific ports can break cluster operations (CKV_AWS_382)
   egress {
-    description = "Allow all outbound"
+    description = "Allow HTTPS for AWS APIs and image pulls"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow DNS UDP"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow DNS TCP"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow kubelet and node communication"
+    from_port   = 10250
+    to_port     = 10250
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  egress {
+    description = "Allow internal VPC traffic (pod-to-pod, services)"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [var.vpc_cidr]
   }
 
   tags = {

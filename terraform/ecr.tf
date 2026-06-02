@@ -9,8 +9,8 @@ resource "aws_ecr_repository" "services" {
   for_each = toset(var.services)
 
   name                 = "${var.project_name}/${each.value}"
-  image_tag_mutability = "MUTABLE" # Allows overwriting tags (e.g., "latest")
-  force_delete         = true      # Allow deletion even if images exist (dev convenience)
+  image_tag_mutability = "IMMUTABLE" # Prevents image tag overwriting (CKV_AWS_51)
+  force_delete         = true        # Allow deletion even if images exist (dev convenience)
 
   # Scan images for vulnerabilities on every push
   image_scanning_configuration {
