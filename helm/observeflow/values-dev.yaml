@@ -7,7 +7,7 @@ global:
   namespace: observeflow
   imageTag: "latest"
 # ECR image repositories
-frontend:
+frontendService:
   replicas: 1
   image:
     repository: 207446234524.dkr.ecr.us-east-1.amazonaws.com/observeflow/frontend-service

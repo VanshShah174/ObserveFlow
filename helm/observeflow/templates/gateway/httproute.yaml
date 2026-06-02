@@ -17,8 +17,8 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: {{ .Values.frontend.name }}
-          port: {{ .Values.frontend.port }}
+        - name: {{ .Values.frontendService.name }}
+          port: {{ .Values.frontendService.port }}
     # Product Service API
     - matches:
         - path:

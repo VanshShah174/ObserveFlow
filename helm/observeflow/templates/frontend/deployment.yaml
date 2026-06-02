@@ -1,39 +1,39 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.frontend.name }}
+  name: {{ .Values.frontendService.name }}
   namespace: {{ .Values.global.namespace }}
   labels:
-    app: {{ .Values.frontend.name }}
+    app: {{ .Values.frontendService.name }}
     {{- include "observeflow.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.frontend.replicas }}
+  replicas: {{ .Values.frontendService.replicas }}
   selector:
     matchLabels:
-      app: {{ .Values.frontend.name }}
+      app: {{ .Values.frontendService.name }}
   template:
     metadata:
       labels:
-        app: {{ .Values.frontend.name }}
+        app: {{ .Values.frontendService.name }}
     spec:
       serviceAccountName: observeflow-sa
       containers:
-        - name: {{ .Values.frontend.name }}
-          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag | default .Values.global.imageTag }}"
-          imagePullPolicy: {{ .Values.frontend.image.pullPolicy | default "IfNotPresent" }}
+        - name: {{ .Values.frontendService.name }}
+          image: "{{ .Values.frontendService.image.repository }}:{{ .Values.frontendService.image.tag | default .Values.global.imageTag }}"
+          imagePullPolicy: {{ .Values.frontendService.image.pullPolicy | default "IfNotPresent" }}
           ports:
-            - containerPort: {{ .Values.frontend.port }}
+            - containerPort: {{ .Values.frontendService.port }}
           resources:
-            {{- toYaml .Values.frontend.resources | nindent 12 }}
+            {{- toYaml .Values.frontendService.resources | nindent 12 }}
           livenessProbe:
             httpGet:
               path: /health
-              port: {{ .Values.frontend.port }}
+              port: {{ .Values.frontendService.port }}
             initialDelaySeconds: 10
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /health
-              port: {{ .Values.frontend.port }}
+              port: {{ .Values.frontendService.port }}
             initialDelaySeconds: 5
             periodSeconds: 5

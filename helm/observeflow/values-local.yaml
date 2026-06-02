@@ -9,7 +9,7 @@ global:
   namespace: observeflow
   imageTag: "latest"
 
-frontend:
+frontendService:
   image:
     repository: vanshshah17/observeflow-frontend-service
     pullPolicy: IfNotPresent
