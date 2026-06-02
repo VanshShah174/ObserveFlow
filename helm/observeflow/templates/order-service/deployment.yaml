@@ -15,7 +15,7 @@ spec:
     metadata:
       labels:
         app: {{ .Values.orderService.name }}
-      {{- if .Values.observability.enabled }}
+      {{- if or .Values.observability.enabled .Values.observability.aws.enabled }}
       annotations:
         instrumentation.opentelemetry.io/inject-nodejs: "true"
       {{- end }}
