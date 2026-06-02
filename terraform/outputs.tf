@@ -75,3 +75,25 @@ output "karpenter_interruption_queue_name" {
   description = "SQS queue for spot interruption events (used in Karpenter Helm values)"
   value       = aws_sqs_queue.karpenter_interruption.name
 }
+
+# ---- OBSERVABILITY ----
+
+output "cloudwatch_log_group" {
+  description = "CloudWatch Log Group for application logs"
+  value       = aws_cloudwatch_log_group.application.name
+}
+
+output "amp_workspace_endpoint" {
+  description = "AMP remote write endpoint"
+  value       = aws_prometheus_workspace.main.prometheus_endpoint
+}
+
+output "amp_workspace_id" {
+  description = "AMP workspace ID"
+  value       = aws_prometheus_workspace.main.id
+}
+
+output "adot_collector_role_arn" {
+  description = "IAM role ARN for ADOT Collector (Pod Identity)"
+  value       = aws_iam_role.adot_collector.arn
+}

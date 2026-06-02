@@ -79,6 +79,30 @@ resource "aws_eks_addon" "pod_identity_agent" {
   depends_on = [aws_eks_node_group.main]
 }
 
+# VPC CNI — pod networking (assigns ENIs/IPs to pods)
+resource "aws_eks_addon" "vpc_cni" {
+  cluster_name = aws_eks_cluster.main.name
+  addon_name   = "vpc-cni"
+
+  depends_on = [aws_eks_node_group.main]
+}
+
+# CoreDNS — cluster DNS resolution
+resource "aws_eks_addon" "coredns" {
+  cluster_name = aws_eks_cluster.main.name
+  addon_name   = "coredns"
+
+  depends_on = [aws_eks_node_group.main]
+}
+
+# kube-proxy — service networking (iptables/IPVS rules)
+resource "aws_eks_addon" "kube_proxy" {
+  cluster_name = aws_eks_cluster.main.name
+  addon_name   = "kube-proxy"
+
+  depends_on = [aws_eks_node_group.main]
+}
+
 # ---- SECURITY GROUP ----
 # Controls network access to/from the EKS cluster
 resource "aws_security_group" "eks_cluster" {
