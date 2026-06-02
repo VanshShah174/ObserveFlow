@@ -39,7 +39,7 @@ function App() {
               <span style={styles.brandLogoText}>OF</span>
             </div>
             <div>
-              <span style={styles.brandText}>ObserveFlow</span>
+              <span style={styles.brandText}>ObserveFlow v2</span>
               <span style={styles.brandTag}>store</span>
             </div>
           </Link>

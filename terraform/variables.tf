@@ -77,3 +77,11 @@ variable "services" {
     "inventory-service"
   ]
 }
+
+# ---- GITHUB ----
+
+variable "github_repo" {
+  description = "GitHub repository in format 'owner/repo' — used for OIDC trust policy"
+  type        = string
+  default     = "VanshShah174/ObserveFlow"
+}

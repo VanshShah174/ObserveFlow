@@ -97,3 +97,10 @@ output "adot_collector_role_arn" {
   description = "IAM role ARN for ADOT Collector (Pod Identity)"
   value       = aws_iam_role.adot_collector.arn
 }
+
+# ---- GITHUB ACTIONS ----
+
+output "github_actions_role_arn" {
+  description = "IAM role ARN for GitHub Actions OIDC — set as AWS_ROLE_ARN secret in GitHub"
+  value       = aws_iam_role.github_actions.arn
+}
