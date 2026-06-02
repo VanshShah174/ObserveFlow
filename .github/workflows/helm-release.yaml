@@ -1,0 +1,62 @@
+# ==============================================================
+# Helm Chart Release — Publish to GitHub Pages
+# ==============================================================
+# Triggers when Chart.yaml version changes on main.
+# Packages the chart and publishes to gh-pages branch as a Helm repo.
+#
+# Users can then:
+#   helm repo add observeflow https://vanshshah174.github.io/ObserveFlow
+#   helm install demo observeflow/observeflow
+# ==============================================================
+
+name: Helm Chart Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'helm/observeflow/Chart.yaml'
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  release:
+    name: Package & Publish Helm Chart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+
+      - name: Build chart dependencies
+        run: helm dependency build ./helm/observeflow
+
+      - name: Package Helm chart
+        run: |
+          mkdir -p .helm-release
+          helm package ./helm/observeflow -d .helm-release
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Update Helm repo index
+        run: |
+          cp .helm-release/*.tgz gh-pages/
+          helm repo index gh-pages --url https://vanshshah174.github.io/ObserveFlow
+
+      - name: Push to gh-pages
+        run: |
+          cd gh-pages
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@observeflow.dev"
+          git add .
+          git diff --staged --quiet || git commit -m "chore: release helm chart $(date +%Y%m%d)"
+          git push
