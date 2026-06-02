@@ -389,9 +389,11 @@ jobs:
         id: map-key
         run: |
           SERVICE="${{ matrix.service }}"
-          # Convention: strip "-service" suffix, convert kebab-case to camelCase
-          # e.g., "cart-service" → "cartService", "frontend-service" → "frontend"
-          KEY=$(echo "$SERVICE" | sed 's/-service$//' | sed -r 's/-([a-z])/\U\1/g')
+          # Convention: convert folder name (kebab-case) to camelCase
+          # "frontend-service" → "frontendService"
+          # "cart-service" → "cartService"
+          # "notification-service" → "notificationService"
+          KEY=$(echo "$SERVICE" | sed -r 's/-([a-z])/\U\1/g')
           echo "key=$KEY" >> $GITHUB_OUTPUT
           echo "Mapped $SERVICE → $KEY"
 
