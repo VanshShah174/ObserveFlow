@@ -12,6 +12,9 @@ RUN npm run build
 # Stage 2: Serve with nginx (includes reverse proxy for API calls)
 FROM nginx:alpine
 
+# Patch OS-level vulnerabilities (CVEs in base image packages)
+RUN apk update && apk upgrade --no-cache
+
 # Remove default nginx config
 RUN rm /etc/nginx/conf.d/default.conf
 
