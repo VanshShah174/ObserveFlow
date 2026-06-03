@@ -10,7 +10,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: otel-collector-config
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "observeflow.labels" . | nindent 4 }}
 data:
@@ -42,9 +42,10 @@ data:
         endpoint: 0.0.0.0:13133
 
     exporters:
-      # Traces → Jaeger (allInOne mode creates service: <release>-jaeger-all-in-one)
+      # Traces → Jaeger (collector service handles OTLP ingestion)
+      # dns:/// prefix required for headless service resolution with gRPC
       otlp/jaeger:
-        endpoint: {{ .Release.Name }}-jaeger-all-in-one.{{ .Values.global.namespace }}.svc.cluster.local:4317
+        endpoint: dns:///{{ .Release.Name }}-jaeger-collector.{{ .Release.Namespace }}.svc.cluster.local:4317
         tls:
           insecure: true
 
@@ -55,7 +56,7 @@ data:
 
       # Logs → Loki
       loki:
-        endpoint: http://{{ .Release.Name }}-loki-gateway.{{ .Values.global.namespace }}.svc.cluster.local/loki/api/v1/push
+        endpoint: http://{{ .Release.Name }}-loki-gateway.{{ .Release.Namespace }}.svc.cluster.local/loki/api/v1/push
 
       # Debug output (useful for troubleshooting)
       debug:
@@ -81,7 +82,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: otel-collector
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: otel-collector
     {{- include "observeflow.labels" . | nindent 4 }}
@@ -137,7 +138,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: otel-collector
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: otel-collector
     {{- include "observeflow.labels" . | nindent 4 }}

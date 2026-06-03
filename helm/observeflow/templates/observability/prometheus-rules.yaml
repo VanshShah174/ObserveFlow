@@ -13,7 +13,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: observeflow-alerts
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     release: observeflow
     {{- include "observeflow.labels" . | nindent 4 }}

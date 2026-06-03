@@ -4,7 +4,6 @@
 # ============================================================================
 
 global:
-  namespace: observeflow
   imageTag: "latest"
 
 # ---- FRONTEND ----
@@ -195,6 +194,11 @@ opentelemetry-operator:
   manager:
     collectorImage:
       repository: otel/opentelemetry-collector-contrib
+    serviceMonitor:
+      enabled: false
+  admissionWebhooks:
+    certManager:
+      enabled: true
 
 # ---- KARPENTER ----
 karpenter:

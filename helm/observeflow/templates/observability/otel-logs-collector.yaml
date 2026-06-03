@@ -12,7 +12,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: otel-logs-collector-config
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: otel-logs-collector
     {{- include "observeflow.labels" . | nindent 4 }}
@@ -21,9 +21,9 @@ data:
     receivers:
       filelog:
         include:
-          - /var/log/pods/{{ .Values.global.namespace }}_*/*/*.log
+          - /var/log/pods/{{ .Release.Namespace }}_*/*/*.log
         exclude:
-          - /var/log/pods/{{ .Values.global.namespace }}_otel-*/*/*.log
+          - /var/log/pods/{{ .Release.Namespace }}_otel-*/*/*.log
         start_at: end
         include_file_path: true
         include_file_name: false
@@ -60,7 +60,7 @@ data:
 
     exporters:
       loki:
-        endpoint: {{ .Values.observability.loki.endpoint }}
+        endpoint: http://{{ .Release.Name }}-loki-gateway.{{ .Release.Namespace }}.svc.cluster.local/loki/api/v1/push
 
     service:
       extensions: [health_check]
@@ -74,7 +74,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: otel-logs-collector
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: otel-logs-collector
     {{- include "observeflow.labels" . | nindent 4 }}

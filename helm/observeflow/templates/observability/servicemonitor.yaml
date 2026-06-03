@@ -9,7 +9,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: otel-collector-monitor
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: otel-collector
     {{- include "observeflow.labels" . | nindent 4 }}

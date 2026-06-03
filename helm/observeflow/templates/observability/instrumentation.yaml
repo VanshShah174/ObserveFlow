@@ -1,41 +1,35 @@
-{{- if .Values.observability.enabled }}
+{{- if and .Values.observability.enabled (.Capabilities.APIVersions.Has "opentelemetry.io/v1alpha1") }}
 # ==============================================================
 # OpenTelemetry Auto-Instrumentation CR
 # ==============================================================
-# Deployed as a post-install/post-upgrade hook so the OTel Operator
-# webhook is ready before this resource is applied.
+# Deploys automatically on 'helm upgrade' (after operator is ready).
+# On first install, apply manually:
+#   kubectl apply -f instrumentation-cr.yaml -n observeflow
 # ==============================================================
 apiVersion: opentelemetry.io/v1alpha1
 kind: Instrumentation
 metadata:
   name: observeflow-instrumentation
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "observeflow.labels" . | nindent 4 }}
-  annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-weight": "10"
-    "helm.sh/hook-delete-policy": before-hook-creation
 spec:
   exporter:
-    endpoint: http://otel-collector.{{ .Values.global.namespace }}.svc.cluster.local:4317
+    endpoint: http://otel-collector.{{ .Release.Namespace }}.svc.cluster.local:4317
   propagators:
     - tracecontext
     - baggage
   sampler:
     type: parentbased_traceidratio
     argument: "1"
-
   nodejs:
     env:
       - name: OTEL_NODE_ENABLED_INSTRUMENTATIONS
         value: "http,express,dns,net"
-
   python:
     env:
       - name: OTEL_PYTHON_EXCLUDED_URLS
         value: "health"
-
   java:
     env:
       - name: OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED

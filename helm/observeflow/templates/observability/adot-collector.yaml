@@ -14,7 +14,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: adot-collector
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "observeflow.labels" . | nindent 4 }}
 ---
@@ -22,7 +22,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: adot-collector-config
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: adot-collector
     {{- include "observeflow.labels" . | nindent 4 }}
@@ -47,9 +47,9 @@ data:
       # Read container logs from node filesystem
       filelog:
         include:
-          - /var/log/pods/{{ .Values.global.namespace }}_*/*/*.log
+          - /var/log/pods/{{ .Release.Namespace }}_*/*/*.log
         exclude:
-          - /var/log/pods/{{ .Values.global.namespace }}_adot-*/*/*.log
+          - /var/log/pods/{{ .Release.Namespace }}_adot-*/*/*.log
         start_at: end
         include_file_path: true
         operators:
@@ -118,7 +118,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: adot-collector
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: adot-collector
     {{- include "observeflow.labels" . | nindent 4 }}
@@ -190,7 +190,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: adot-collector
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: adot-collector
     {{- include "observeflow.labels" . | nindent 4 }}
