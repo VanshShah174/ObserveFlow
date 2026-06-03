@@ -31,8 +31,6 @@ dependencies:
     repository: https://jaegertracing.github.io/helm-charts
     condition: observability.enabled
 
-  # OpenTelemetry Operator (auto-instrumentation)
-  - name: opentelemetry-operator
-    version: "0.74.0"
-    repository: https://open-telemetry.github.io/opentelemetry-helm-charts
-    condition: observability.enabled
+  # NOTE: OpenTelemetry Operator is installed as a prerequisite (not a subchart)
+  # because it requires cert-manager and creates ServiceMonitors that conflict
+  # when bundled. Install via: scripts/setup.sh

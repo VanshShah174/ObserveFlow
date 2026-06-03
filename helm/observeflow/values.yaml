@@ -190,15 +190,8 @@ jaeger:
   agent:
     enabled: false
 
-opentelemetry-operator:
-  manager:
-    collectorImage:
-      repository: otel/opentelemetry-collector-contrib
-    serviceMonitor:
-      enabled: false
-  admissionWebhooks:
-    certManager:
-      enabled: true
+# NOTE: OpenTelemetry Operator is installed as a prerequisite via scripts/setup.sh
+# It requires cert-manager and must run before ObserveFlow is installed.
 
 # ---- KARPENTER ----
 karpenter:
