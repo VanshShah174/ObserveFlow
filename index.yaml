@@ -3,7 +3,7 @@ entries:
   observeflow:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-06-03T00:47:23.347772294Z"
+    created: "2026-06-03T23:15:22.820245841Z"
     dependencies:
     - condition: observability.enabled
       name: kube-prometheus-stack
@@ -17,12 +17,8 @@ entries:
       name: jaeger
       repository: https://jaegertracing.github.io/helm-charts
       version: 3.3.1
-    - condition: observability.enabled
-      name: opentelemetry-operator
-      repository: https://open-telemetry.github.io/opentelemetry-helm-charts
-      version: 0.74.0
     description: ObserveFlow - Polyglot E-Commerce Microservices Platform
-    digest: 5474a83df60e0037abbccb743ae7527f6a45a813b662abc56305015b9c5024d9
+    digest: 507b10b2b5a3d5d29be392b3745d6a5b196e0f9c1e92bd29031a5f9e977093dc
     keywords:
     - microservices
     - e-commerce
@@ -37,7 +33,7 @@ entries:
     version: 0.3.0
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-06-03T00:47:23.292628573Z"
+    created: "2026-06-03T23:15:22.758451646Z"
     dependencies:
     - condition: observability.enabled
       name: kube-prometheus-stack
@@ -69,4 +65,4 @@ entries:
     urls:
     - https://vanshshah174.github.io/ObserveFlow/observeflow-0.2.0.tgz
     version: 0.2.0
-generated: "2026-06-03T00:47:23.2395547Z"
+generated: "2026-06-03T23:15:22.691765586Z"
