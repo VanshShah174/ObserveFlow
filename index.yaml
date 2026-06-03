@@ -3,7 +3,41 @@ entries:
   observeflow:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-06-02T23:16:05.671444702Z"
+    created: "2026-06-03T00:47:23.347772294Z"
+    dependencies:
+    - condition: observability.enabled
+      name: kube-prometheus-stack
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 62.7.0
+    - condition: observability.enabled
+      name: loki
+      repository: https://grafana.github.io/helm-charts
+      version: 6.16.0
+    - condition: observability.enabled
+      name: jaeger
+      repository: https://jaegertracing.github.io/helm-charts
+      version: 3.3.1
+    - condition: observability.enabled
+      name: opentelemetry-operator
+      repository: https://open-telemetry.github.io/opentelemetry-helm-charts
+      version: 0.74.0
+    description: ObserveFlow - Polyglot E-Commerce Microservices Platform
+    digest: 5474a83df60e0037abbccb743ae7527f6a45a813b662abc56305015b9c5024d9
+    keywords:
+    - microservices
+    - e-commerce
+    - observability
+    - opentelemetry
+    maintainers:
+    - name: Vansh Shah
+    name: observeflow
+    type: application
+    urls:
+    - https://vanshshah174.github.io/ObserveFlow/observeflow-0.3.0.tgz
+    version: 0.3.0
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2026-06-03T00:47:23.292628573Z"
     dependencies:
     - condition: observability.enabled
       name: kube-prometheus-stack
@@ -35,4 +69,4 @@ entries:
     urls:
     - https://vanshshah174.github.io/ObserveFlow/observeflow-0.2.0.tgz
     version: 0.2.0
-generated: "2026-06-02T23:16:05.598796946Z"
+generated: "2026-06-03T00:47:23.2395547Z"
