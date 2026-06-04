@@ -1,6 +1,5 @@
 const express = require("express");
 const cors = require("cors");
-const { trace } = require("@opentelemetry/api");
 const { itemsAddedCounter, currentItemsGauge, operationDuration } = require("./metrics");
 
 const app = express();
@@ -12,10 +11,16 @@ app.use(express.json());
 // Structured JSON logging middleware (with trace correlation)
 app.use((req, res, next) => {
   const start = Date.now();
-  res.on("finish", () => {
-    const span = trace.getActiveSpan();
-    const spanContext = span?.spanContext();
 
+  // Capture span context NOW (while the span is active in this async context)
+  // The auto-instrumentation creates the span before our middleware runs
+  const { trace } = require("@opentelemetry/api");
+  const span = trace.getActiveSpan();
+  const spanContext = span?.spanContext();
+  const traceId = spanContext?.traceId || "";
+  const spanId = spanContext?.spanId || "";
+
+  res.on("finish", () => {
     const log = {
       timestamp: new Date().toISOString(),
       service: "cart-service",
@@ -23,8 +28,8 @@ app.use((req, res, next) => {
       path: req.originalUrl,
       statusCode: res.statusCode,
       durationMs: Date.now() - start,
-      traceId: spanContext?.traceId || "",
-      spanId: spanContext?.spanId || "",
+      traceId: traceId,
+      spanId: spanId,
     };
     console.log(JSON.stringify(log));
   });
