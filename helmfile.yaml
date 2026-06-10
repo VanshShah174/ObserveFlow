@@ -1,0 +1,162 @@
+# yaml-language-server: $schema=https://json.schemastore.org/helmfile
+# ==============================================================
+# ObserveFlow — Declarative Multi-Chart Deployment (Helmfile)
+# ==============================================================
+# Installs all prerequisites + ObserveFlow in the correct order.
+#
+# DEPLOYMENT ORDER (enforced via `needs:`):
+#
+#   TIER 0 — cert-manager (no dependencies)
+#     → TLS certificates for OTel Operator admission webhooks
+#
+#   TIER 1 — OpenTelemetry Operator (depends on cert-manager)
+#     → Installs CRDs (Instrumentation, OpenTelemetryCollector)
+#     → Runs mutating webhook that injects auto-instrumentation
+#
+#   TIER 2 — ObserveFlow (depends on OTel Operator being READY)
+#     → 7 microservices + OTel Collector + Instrumentation CR
+#     → Bundled subcharts: Prometheus, Grafana, Loki, Jaeger
+#     → On AWS: ADOT Collector → X-Ray + AMP + CloudWatch
+#
+# WHY HELMFILE?
+#   Helm alone cannot enforce ordering between separate charts.
+#   cert-manager MUST be running before OTel Operator starts (webhook TLS).
+#   OTel Operator MUST be watching before Instrumentation CRs are applied.
+#   Helmfile's `needs:` + `wait: true` guarantees this sequence.
+#
+# USAGE:
+#   Local (Kind/Minikube):  helmfile sync
+#   AWS (EKS):              helmfile --environment aws sync
+#   Preview changes:        helmfile diff
+#   Teardown:               helmfile destroy
+#
+# PREREQUISITES:
+#   - kubectl connected to a cluster
+#   - helmfile installed: https://github.com/helmfile/helmfile
+#   - helm-diff plugin (REQUIRED — helmfile will fail without it):
+#       helm plugin install https://github.com/databus23/helm-diff
+# ==============================================================
+
+helmDefaults:
+  wait: true              # Block until all pods Ready before next release
+  timeout: 300            # 5 minutes per release
+  cleanupOnFail: true     # Remove failed resources on error
+  atomic: true            # Auto-rollback on failure
+
+# ------------------------------------------------------------------------------
+# REPOSITORIES
+# ------------------------------------------------------------------------------
+repositories:
+  - name: jetstack
+    url: https://charts.jetstack.io
+  - name: open-telemetry
+    url: https://open-telemetry.github.io/opentelemetry-helm-charts
+  - name: observeflow
+    url: https://vanshshah174.github.io/ObserveFlow
+
+# ------------------------------------------------------------------------------
+# ENVIRONMENTS
+# - default: Local cluster (Kind/Minikube) — Prometheus + Grafana + Jaeger + Loki
+# - aws: EKS — ADOT + CloudWatch + X-Ray + AMP
+# ------------------------------------------------------------------------------
+environments:
+  default:    # Local — uses values.yaml defaults (observability.aws.enabled=false)
+  aws:        # EKS — loads values-dev.yaml which has AWS-specific config
+    values:
+      - helm/observeflow/values-dev.yaml
+
+# ==============================================================================
+# RELEASES — Ordered via `needs:` to enforce correct startup sequence
+# ==============================================================================
+releases:
+
+  # ============================================================
+  # TIER 0 — cert-manager
+  # ============================================================
+  # WHY FIRST: OTel Operator uses admission webhooks that require
+  # valid TLS certificates. cert-manager provisions those certs.
+  # Without this, OTel Operator pods crash with webhook TLS errors.
+  # ============================================================
+  - name: cert-manager
+    namespace: cert-manager
+    createNamespace: true
+    chart: jetstack/cert-manager
+    version: "1.17.1"
+    set:
+      - name: crds.enabled
+        value: "true"
+
+  # ============================================================
+  # TIER 1 — OpenTelemetry Operator
+  # ============================================================
+  # WHY AFTER cert-manager: Operator webhook TLS requires
+  # cert-manager to already be running and issuing certificates.
+  #
+  # WHY BEFORE ObserveFlow: Operator must be watching for
+  # Instrumentation CRs so it can inject auto-instrumentation
+  # when application pods are created in TIER 2.
+  # ============================================================
+  - name: otel-operator
+    namespace: otel-system
+    createNamespace: true
+    chart: open-telemetry/opentelemetry-operator
+    version: "0.72.0"
+    needs:
+      - cert-manager/cert-manager
+    hooks:
+      # Extra safety: ensure operator webhook is fully registered
+      # before proceeding to TIER 2 (prevents race condition where
+      # Instrumentation CR is applied before operator can process it)
+      - events: ["postsync"]
+        showlogs: true
+        command: "kubectl"
+        args:
+          - "wait"
+          - "--for=condition=Available"
+          - "deployment"
+          - "-l"
+          - "app.kubernetes.io/name=opentelemetry-operator"
+          - "-n"
+          - "otel-system"
+          - "--timeout=120s"
+    set:
+      - name: manager.collectorImage.repository
+        value: otel/opentelemetry-collector-contrib
+
+  # ============================================================
+  # TIER 2 — ObserveFlow
+  # ============================================================
+  # YOUR CHART — contains everything:
+  #   • 7 microservices (frontend, product, cart, order, user, notification, inventory)
+  #   • OTel Collector (central telemetry pipeline)
+  #   • Instrumentation CR (tells operator how to instrument pods)
+  #   • Bundled subcharts: kube-prometheus-stack, Loki, Jaeger
+  #   • ADOT Collector (enabled when observability.aws.enabled=true)
+  #   • Grafana dashboards + datasources (pre-configured)
+  #
+  # WHY LAST: OTel Operator must be watching BEFORE this chart's
+  # Instrumentation CR is applied, otherwise the operator misses it
+  # and pods won't get auto-instrumentation injected.
+  # ============================================================
+  - name: observeflow
+    namespace: observeflow
+    createNamespace: true
+    chart: observeflow/observeflow
+    version: "0.4.0"
+    needs:
+      - otel-system/otel-operator
+    hooks:
+      # After install: restart all deployments to inject instrumentation.
+      # The OTel Operator's mutating webhook only fires on pod CREATION.
+      # Pods created during helm install may have started before the
+      # Instrumentation CR was processed. Restarting creates new pods
+      # that the webhook catches and injects with the OTel SDK.
+      - events: ["postsync"]
+        showlogs: true
+        command: "kubectl"
+        args:
+          - "rollout"
+          - "restart"
+          - "deployment"
+          - "-n"
+          - "observeflow"
