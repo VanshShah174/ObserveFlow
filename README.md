@@ -144,6 +144,8 @@ kubectl port-forward svc/demo-jaeger-query 16686:16686 -n observeflow
 bash scripts/generate-load.sh 60
 ```
 
+📖 **New here?** Check out the [Complete Setup Guide](scripts/setup-guide.md) for detailed step-by-step instructions with explanations.
+
 ---
 
 ## ☁️ Dual-Mode Observability (Local + AWS)
